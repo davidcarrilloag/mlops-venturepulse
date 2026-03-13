@@ -43,13 +43,24 @@ jobs:
       - name: Verify downloaded artifact
         run: ls -R 07-cicd
 
-      - name: Build & Test Docker image
+      - name: Build and Test Docker image
         working-directory: 07-cicd
         run: |
           docker build -t venturepulse-app .
           docker run -d -p 9696:9696 --name venturepulse-app venturepulse-app
-          sleep 20
-          curl -f http://localhost:9696/health || (docker logs venturepulse-app && exit 1)
+          echo "Waiting for API..."
+          for i in $(seq 1 20); do
+            sleep 3
+            if curl -sf http://localhost:9696/health; then
+              echo "API ready"
+              break
+            fi
+            echo "Attempt $i/20..."
+            if [ $i -eq 20 ]; then
+              docker logs venturepulse-app
+              exit 1
+            fi
+          done
           pytest -q test_api.py
           docker stop venturepulse-app && docker rm venturepulse-app
 
