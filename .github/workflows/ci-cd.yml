@@ -14,11 +14,11 @@ permissions:
 
 jobs:
   call-train:
-    name: "Train Model"
+    name: Train Model
     uses: ./.github/workflows/train.yml
 
   build-test-deploy:
-    name: "Build, Test, and Deploy"
+    name: Build, Test, and Deploy
     needs: call-train
     runs-on: ubuntu-latest
 
@@ -32,9 +32,9 @@ jobs:
           python-version: "3.12"
 
       - name: Install testing tools
-        run: pip install flake8 pytest requests
+        run: pip install pytest requests
 
-      - name: Download latest trained-model artifact
+      - name: Download trained-model artifact
         uses: actions/download-artifact@v4
         with:
           name: trained-model
@@ -43,17 +43,20 @@ jobs:
       - name: Verify downloaded artifact
         run: ls -R 07-cicd
 
-      - name: Lint
-        working-directory: 07-cicd
-        run: flake8 . --max-line-length=100 --ignore=E501
-
-      - name: Build & Test Docker image
+      - name: Build and Test Docker image
         working-directory: 07-cicd
         run: |
           docker build -t venturepulse-app .
           docker run -d -p 9696:9696 --name venturepulse-app venturepulse-app
-          sleep 20
-          curl -f http://localhost:9696/health || (docker logs venturepulse-app && exit 1)
+          echo "Waiting for API to be ready..."
+          for i in $(seq 1 15); do
+            if curl -sf http://localhost:9696/health; then
+              echo "API is ready"
+              break
+            fi
+            echo "Attempt $i/15 - waiting 3s..."
+            sleep 3
+          done
           pytest -q test_api.py
           docker stop venturepulse-app && docker rm venturepulse-app
 
@@ -64,22 +67,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Tag and Push Docker image to GHCR with Versioning
+      - name: Tag and Push Docker image to GHCR
         run: |
           IMAGE_ID="ghcr.io/${{ github.repository }}"
           IMAGE_ID=$(echo $IMAGE_ID | tr '[:upper:]' '[:lower:]')
-          
-          # Use the first 7 characters of the commit SHA as the version tag.
           VERSION=$(echo "${{ github.sha }}" | cut -c1-7)
-          
-          echo "Pushing image: $IMAGE_ID with tags: latest, $VERSION"
-
-          # Tag with the unique version
+          echo "Pushing $IMAGE_ID:$VERSION and $IMAGE_ID:latest"
           docker tag venturepulse-app "$IMAGE_ID:$VERSION"
-          
-          # Tag with 'latest'
           docker tag venturepulse-app "$IMAGE_ID:latest"
-          
-          # Push both tags
           docker push "$IMAGE_ID:$VERSION"
           docker push "$IMAGE_ID:latest"

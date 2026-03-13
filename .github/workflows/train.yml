@@ -1,18 +1,14 @@
+# .github/workflows/train.yml
+
 name: Train Model
 
 on:
   workflow_call:
-    outputs:
-      run_id:
-        description: "MLflow run ID of the trained model"
-        value: ${{ jobs.train.outputs.run_id }}
 
 jobs:
   train:
     name: Train VenturePulse Model
     runs-on: ubuntu-latest
-    outputs:
-      run_id: ${{ steps.train_step.outputs.run_id }}
 
     steps:
       - uses: actions/checkout@v4
@@ -22,23 +18,22 @@ jobs:
           python-version: "3.12"
 
       - name: Install training dependencies
-        run: |
-          pip install mlflow scikit-learn pandas numpy
+        run: pip install -r 07-cicd/requirements.txt
 
       - name: Train model
-        id: train_step
         working-directory: 07-cicd
-        run: |
-          python train.py
-          RUN_ID=$(cat run_id.txt)
-          echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
-          echo "Trained run_id: $RUN_ID"
+        run: python train.py
 
-      - name: Upload model artifact
+      - name: Verify artifact contents
+        run: |
+          ls -R 07-cicd/models
+          cat 07-cicd/run_id.txt
+
+      - name: Upload trained model
         uses: actions/upload-artifact@v4
         with:
-          name: venturepulse-model
+          name: trained-model
           path: |
-            07-cicd/models/
             07-cicd/run_id.txt
+            07-cicd/models/
           retention-days: 7
