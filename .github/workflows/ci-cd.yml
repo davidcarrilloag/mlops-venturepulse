@@ -1,0 +1,111 @@
+name: VenturePulse CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+
+  # ────────────────────────────────────────────
+  # 1. TRAIN — calls reusable workflow
+  # ────────────────────────────────────────────
+  train:
+    name: Train Model
+    uses: ./.github/workflows/train.yml
+
+  # ────────────────────────────────────────────
+  # 2. LINT
+  # ────────────────────────────────────────────
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    needs: train
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install flake8
+        run: pip install flake8
+
+      - name: Run flake8 on 07-cicd
+        run: flake8 07-cicd
+
+  # ────────────────────────────────────────────
+  # 3. BUILD & TEST
+  # ────────────────────────────────────────────
+  build-and-test:
+    name: Build & Test Docker Image
+    runs-on: ubuntu-latest
+    needs: lint
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download trained model artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: venturepulse-model
+          path: 07-cicd/
+
+      - name: Build Docker image
+        run: |
+          docker build -t venturepulse:latest ./07-cicd
+
+      - name: Start container
+        run: |
+          docker run -d --name vp-api -p 9696:9696 venturepulse:latest
+          echo "Waiting for container to be ready..."
+          sleep 20
+
+      - name: Install test dependencies
+        run: pip install requests pytest
+
+      - name: Run API tests against container
+        run: pytest 07-cicd/test_api.py -v
+
+      - name: Stop container
+        if: always()
+        run: docker stop vp-api || true
+
+  # ────────────────────────────────────────────
+  # 4. PUSH TO GHCR (main branch only)
+  # ────────────────────────────────────────────
+  push-to-ghcr:
+    name: Push Image to GHCR
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download trained model artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: venturepulse-model
+          path: 07-cicd/
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push image to GHCR
+        uses: docker/build-push-action@v5
+        with:
+          context: ./07-cicd
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/mlops-venturepulse:latest
+            ghcr.io/${{ github.repository_owner }}/mlops-venturepulse:${{ github.sha }}
