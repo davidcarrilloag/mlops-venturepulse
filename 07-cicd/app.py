@@ -26,6 +26,7 @@ from pydantic import BaseModel, Field
 MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000")
 RUN_ID: Optional[str] = None
 model = None
+sklearn_model = None
 
 # ──────────────────────────────────────────────
 # Categorical vocabularies
@@ -87,9 +88,9 @@ def prepare_features(data: dict) -> pd.DataFrame:
 
     df = pd.DataFrame([row])
 
-    if model is not None:
+    if sklearn_model is not None:
         try:
-            expected_cols = model._model_impl.sklearn_model.feature_names_in_
+            expected_cols = sklearn_model.feature_names_in_
             df = df.reindex(columns=expected_cols, fill_value=0)
         except AttributeError:
             pass
@@ -114,12 +115,20 @@ def probability_to_confidence(prob: float) -> str:
 # ──────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global RUN_ID, model
+    global RUN_ID, model, sklearn_model
 
     with open("run_id.txt", "r") as f:
         RUN_ID = f.read().strip()
 
     model = mlflow.pyfunc.load_model("models/model")
+    # Extract underlying sklearn model for predict_proba access
+    try:
+        sklearn_model = model._model_impl.sklearn_model
+        print(f"[startup] Sklearn model extracted: {type(sklearn_model)}")
+    except AttributeError:
+        sklearn_model = None
+        print("[startup] Could not extract sklearn model, falling back to pyfunc")
+
     print(f"[startup] Loaded model from models/model")
     yield
 
@@ -196,7 +205,7 @@ class PredictionResponse(BaseModel):
 
 
 # ──────────────────────────────────────────────
-# Endpoints — mirrors professor pattern
+# Endpoints
 # ──────────────────────────────────────────────
 @app.get("/")
 def root():
@@ -224,14 +233,21 @@ def predict(startup: StartupRequest):
 
     try:
         features_df = prepare_features(startup.dict())
-        proba_output = model.predict(features_df)
-        # pyfunc returns a DataFrame or array — extract positive class probability
-        if hasattr(proba_output, "values"):
-            proba_output = proba_output.values
-        proba_output = np.array(proba_output).flatten()
-        # If model returns probabilities for both classes, take index 1
-        prob = float(proba_output[1]) if len(proba_output) == 2 else float(proba_output[0])
+
+        if sklearn_model is not None:
+            # Use predict_proba for real probabilities
+            proba = sklearn_model.predict_proba(features_df)[0][1]
+            prob = float(proba)
+        else:
+            # Fallback: pyfunc predict returns 0/1
+            output = model.predict(features_df)
+            if hasattr(output, "values"):
+                output = output.values
+            output = np.array(output).flatten()
+            prob = float(output[1]) if len(output) == 2 else float(output[0])
+
         pred = 1 if prob >= 0.5 else 0
+
     except Exception as e:
         raise HTTPException(status_code=422, detail=f"Prediction failed: {str(e)}")
 
