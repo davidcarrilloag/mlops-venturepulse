@@ -1,0 +1,20 @@
+Category,Name,Precision@100,Sample_Count
+Sector,AI/ML,0.32,788
+Sector,Biotech,0.39,346
+Sector,Climate,0.4,506
+Sector,Consumer,0.32,464
+Sector,EdTech,0.28,271
+Sector,Fintech,0.46,745
+Sector,Hardware,0.3,180
+Sector,Healthcare,0.37,612
+Sector,SaaS,0.38,588
+Location,Austin,0.45,452
+Location,Berlin,0.35,390
+Location,Boston,0.39,551
+Location,London,0.38,395
+Location,NYC,0.39,727
+Location,Remote,0.35,226
+Location,Silicon Valley,0.34,932
+Location,Singapore,0.28,327
+Location,Tel Aviv,0.32,259
+Location,Toronto,0.32,241

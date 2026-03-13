@@ -1,0 +1,5 @@
+Dimension,Mean_Precision,Std_Deviation,Min_Precision,Max_Precision,Passes_Floor_30pct,Passes_Variance_15pct
+Overall,0.4,,,,True,True
+By Sector,0.35777777777777775,0.05390893098092535,0.28,0.46,False,True
+By Location,0.357,0.04517742799230607,0.28,0.45,False,True
+Tier-1 vs Non-Tier-1,,,0.33,0.44,True,True
