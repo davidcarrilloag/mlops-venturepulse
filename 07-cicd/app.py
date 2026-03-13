@@ -17,6 +17,7 @@ import mlflow.pyfunc
 import numpy as np
 import pandas as pd
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 # ──────────────────────────────────────────────
@@ -131,6 +132,13 @@ app = FastAPI(
     description="Predicts startup high-traction probability at t=18 months.",
     version="1.0.0",
     lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
