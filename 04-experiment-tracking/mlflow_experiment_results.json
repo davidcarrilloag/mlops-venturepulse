@@ -1,0 +1,48 @@
+{
+  "experiment_name": "venturepulse-startup-prediction",
+  "mlflow_tracking_uri": "http://127.0.0.1:5000",
+  "training_date": "2026-03-09T23:25:31.606045",
+  "dataset_info": {
+    "total_samples": 30000,
+    "train_samples": 21000,
+    "val_samples": 4500,
+    "test_samples": 4500,
+    "n_features": 46,
+    "success_rate": 0.25,
+    "random_seed": 42
+  },
+  "best_model": {
+    "name": "Random Forest",
+    "run_id": "2782d1b61ccb46dbabc00447e6195c4c",
+    "precision_at_100": 0.4,
+    "auc_roc": 0.6305722469135802,
+    "f1_score": 0.4149545301448299,
+    "beats_target": true
+  },
+  "all_models": [
+    {
+      "name": "Logistic Regression",
+      "precision_at_100": 0.35,
+      "auc_roc": 0.6249968724279835,
+      "f1_score": 0.42355117139334153,
+      "accuracy": 0.5844444444444444,
+      "run_id": "463965eda2e74aafb5ad3b4ea11c60f9"
+    },
+    {
+      "name": "Decision Tree",
+      "precision_at_100": 0.31,
+      "auc_roc": 0.5584769053497942,
+      "f1_score": 0.3772348033373063,
+      "accuracy": 0.5355555555555556,
+      "run_id": "159b69534de44a03b8e7209edf0672d1"
+    },
+    {
+      "name": "Random Forest",
+      "precision_at_100": 0.4,
+      "auc_roc": 0.6305722469135802,
+      "f1_score": 0.4149545301448299,
+      "accuracy": 0.614,
+      "run_id": "2782d1b61ccb46dbabc00447e6195c4c"
+    }
+  ]
+}

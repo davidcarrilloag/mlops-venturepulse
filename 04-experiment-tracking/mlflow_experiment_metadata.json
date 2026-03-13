@@ -1,0 +1,33 @@
+{
+  "best_model": "Random Forest",
+  "best_run_id": "bce2b00fe3d7440194c19a51237cf34c",
+  "precision_at_100": 0.42,
+  "training_date": "2026-03-09T22:57:50.137484",
+  "dataset_size": 30000,
+  "n_features": 46,
+  "mlflow_tracking_uri": "http://127.0.0.1:5000",
+  "experiment_name": "venturepulse-startup-prediction",
+  "all_results": [
+    {
+      "model": "Logistic Regression",
+      "precision_at_100": 0.35,
+      "auc_roc": 0.6249968724279835,
+      "f1_score": 0.42355117139334153,
+      "run_id": "f26d260facd24d6b92a23d9a25556c6b"
+    },
+    {
+      "model": "Decision Tree",
+      "precision_at_100": 0.31,
+      "auc_roc": 0.5584769053497942,
+      "f1_score": 0.3772348033373063,
+      "run_id": "c15e864971654fab8836c2e93afc3c32"
+    },
+    {
+      "model": "Random Forest",
+      "precision_at_100": 0.42,
+      "auc_roc": 0.6272421399176955,
+      "f1_score": 0.40852575488454707,
+      "run_id": "bce2b00fe3d7440194c19a51237cf34c"
+    }
+  ]
+}
