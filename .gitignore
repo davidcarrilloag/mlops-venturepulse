@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Virtual environments
+venturepulse_env/
+.venv/
+env/
+
+# MLflow
+mlruns/
+mlflow.db
+mlartifacts/
+
+# Model files (baked into Docker at CI time)
+models/
+
+# Data outputs
+data/predictions.csv
+
+# Monitoring reports
+monitoring_report.html
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Jupyter
+.ipynb_checkpoints/
