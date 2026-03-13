@@ -118,9 +118,8 @@ async def lifespan(app: FastAPI):
     with open("run_id.txt", "r") as f:
         RUN_ID = f.read().strip()
 
-    mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
-    model = mlflow.pyfunc.load_model(f"runs:/{RUN_ID}/model")
-    print(f"[startup] Loaded model from run: {RUN_ID}")
+    model = mlflow.pyfunc.load_model("models/model")
+    print(f"[startup] Loaded model from models/model")
     yield
 
 
