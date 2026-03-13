@@ -58,9 +58,16 @@ jobs:
 
       - name: Start container
         run: |
-          docker run -d --name vp-api -p 9696:9696 venturepulse:latest
-          echo "Waiting for container to be ready..."
-          sleep 20
+           docker run -d --name vp-api -p 9696:9696 venturepulse:latest
+           echo "Waiting for API to be ready..."
+           for i in {1..30}; do
+             if curl -sf http://localhost:9696/health; then
+               echo "API is ready"
+               break
+             fi
+             echo "Attempt $i/30 - waiting..."
+             sleep 3
+           done
 
       - name: Install test dependencies
         run: pip install requests pytest
