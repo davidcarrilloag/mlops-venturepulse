@@ -1,105 +1,61 @@
+# .github/workflows/ci-cd.yml
+
 name: VenturePulse CI/CD Pipeline
 
 on:
   push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  packages: write
 
 jobs:
-
-  # ────────────────────────────────────────────
-  # 1. TRAIN — calls reusable workflow
-  # ────────────────────────────────────────────
-  train:
-    name: Train Model
+  call-train:
+    name: "Train Model"
     uses: ./.github/workflows/train.yml
 
-  # ────────────────────────────────────────────
-  # 2. LINT
-  # ────────────────────────────────────────────
-  lint:
-    name: Lint
+  build-test-deploy:
+    name: "Build, Test, and Deploy"
+    needs: call-train
     runs-on: ubuntu-latest
-    needs: train
-    steps:
-      - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - name: Install flake8
-        run: pip install flake8
+      - name: Install testing tools
+        run: pip install flake8 pytest requests
 
-      - name: Run flake8 on 07-cicd
-        run: flake8 07-cicd
-
-  # ────────────────────────────────────────────
-  # 3. BUILD & TEST
-  # ────────────────────────────────────────────
-  build-and-test:
-    name: Build & Test Docker Image
-    runs-on: ubuntu-latest
-    needs: lint
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Download trained model artifact
+      - name: Download latest trained-model artifact
         uses: actions/download-artifact@v4
         with:
-          name: venturepulse-model
+          name: trained-model
           path: 07-cicd/
 
-      - name: Build Docker image
+      - name: Verify downloaded artifact
+        run: ls -R 07-cicd
+
+      - name: Lint
+        working-directory: 07-cicd
+        run: flake8 . --max-line-length=100 --ignore=E501
+
+      - name: Build & Test Docker image
+        working-directory: 07-cicd
         run: |
-          docker build -t venturepulse:latest ./07-cicd
-
-      - name: Start container
-        run: |
-           docker run -d --name vp-api -p 9696:9696 venturepulse:latest
-           echo "Waiting for API to be ready..."
-           for i in {1..30}; do
-             if curl -sf http://localhost:9696/health; then
-               echo "API is ready"
-               break
-             fi
-             echo "Attempt $i/30 - waiting..."
-             sleep 3
-           done
-
-      - name: Install test dependencies
-        run: pip install requests pytest
-
-      - name: Run API tests against container
-        run: pytest 07-cicd/test_api.py -v
-
-      - name: Stop container
-        if: always()
-        run: docker stop vp-api || true
-
-  # ────────────────────────────────────────────
-  # 4. PUSH TO GHCR (main branch only)
-  # ────────────────────────────────────────────
-  push-to-ghcr:
-    name: Push Image to GHCR
-    runs-on: ubuntu-latest
-    needs: build-and-test
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-
-    permissions:
-      contents: read
-      packages: write
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Download trained model artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: venturepulse-model
-          path: 07-cicd/
+          docker build -t venturepulse-app .
+          docker run -d -p 9696:9696 --name venturepulse-app venturepulse-app
+          sleep 20
+          curl -f http://localhost:9696/health || (docker logs venturepulse-app && exit 1)
+          pytest -q test_api.py
+          docker stop venturepulse-app && docker rm venturepulse-app
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
@@ -108,11 +64,22 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push image to GHCR
-        uses: docker/build-push-action@v5
-        with:
-          context: ./07-cicd
-          push: true
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/mlops-venturepulse:latest
-            ghcr.io/${{ github.repository_owner }}/mlops-venturepulse:${{ github.sha }}
+      - name: Tag and Push Docker image to GHCR with Versioning
+        run: |
+          IMAGE_ID="ghcr.io/${{ github.repository }}"
+          IMAGE_ID=$(echo $IMAGE_ID | tr '[:upper:]' '[:lower:]')
+          
+          # Use the first 7 characters of the commit SHA as the version tag.
+          VERSION=$(echo "${{ github.sha }}" | cut -c1-7)
+          
+          echo "Pushing image: $IMAGE_ID with tags: latest, $VERSION"
+
+          # Tag with the unique version
+          docker tag venturepulse-app "$IMAGE_ID:$VERSION"
+          
+          # Tag with 'latest'
+          docker tag venturepulse-app "$IMAGE_ID:latest"
+          
+          # Push both tags
+          docker push "$IMAGE_ID:$VERSION"
+          docker push "$IMAGE_ID:latest"
