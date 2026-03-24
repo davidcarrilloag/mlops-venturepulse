@@ -60,9 +60,6 @@ meeting all three of the following criteria at t=18 months:
 - 💰 **Revenue ≥ $500K**
 - 📊 **MRR ≥ $25K**
 
-This turns a subjective, unscalable process into a ranked weekly shortlist that
-analysts can act on immediately.
-
 ---
 
 ## 📊 The Dataset
@@ -81,9 +78,6 @@ All features are available at pitch stage to prevent data leakage. Categorical
 variables (sector, location, funding stage, founder background, team diversity)
 are one-hot encoded with `drop_first=False` to preserve full interpretability.
 
-Distributions are calibrated against NVCA 2024 and PitchBook 2024 benchmarks:
-30% Pre-seed, 50% Seed, 20% Series A; no sector exceeds 25% of records.
-
 ---
 
 ## 🤖 The Model
@@ -97,8 +91,7 @@ We evaluated three candidate models in a structured comparison:
 | **Random Forest** ✅ | **38%** | **0.705** | **0.378** |
 
 **Random Forest** was selected as the production model due to its superior
-Precision@100 — the metric that directly maps to business value (how many of
-the top 100 recommended startups are genuinely high-traction).
+Precision@100 — the metric that directly maps to business value.
 
 ### Final Model Configuration
 
@@ -109,7 +102,7 @@ RandomForestClassifier(
     min_samples_split=50,
     min_samples_leaf=20,
     max_features="sqrt",
-    class_weight="balanced",   # handles 3:1 class imbalance
+    class_weight="balanced",
     random_state=42,
 )
 ```
@@ -117,8 +110,7 @@ RandomForestClassifier(
 ### Why Precision@100?
 
 A VC analyst reviews roughly **100 deals per week**. Precision@100 measures
-how many of those 100 model-selected startups are truly high-traction — exactly
-matching the real operational constraint.
+how many of those 100 model-selected startups are truly high-traction.
 
 | Strategy | Precision@100 | vs. Random |
 | :--- | :---: | :---: |
@@ -126,17 +118,12 @@ matching the real operational constraint.
 | Heuristic rule (Series A + funding > $2M) | 30% | +20% |
 | **VenturePulse RF** | **38%** | **+52%** |
 
-This means analysts spend their time on **13 more genuine opportunities per week**
-compared to random selection, and beat the rule-based heuristic by 8 percentage points.
-
 ---
 
 ## ⚖️ Fairness Analysis
 
 We audited model performance across all sectors and geographies against a
-**30% precision floor** — the minimum acceptable performance per segment,
-chosen to match the heuristic baseline. No segment should vary more than 15%
-from the mean.
+**30% precision floor**. No segment should vary more than 15% from the mean.
 
 ### By Sector
 
@@ -167,89 +154,52 @@ from the mean.
 | Tel Aviv | 37% | ✅ Pass |
 | Toronto | 35% | ✅ Pass |
 
-### Deployment Decision
-
-Both flagged segments fall only **2 percentage points** below the floor, with
-variance across all segments well within acceptable range (CoV < 15%). The model
-was **approved for deployment** with the following mitigation:
-
-- All predictions for **EdTech** and **Singapore** startups return
-  `"flagged_for_review": true` in the API response
-- These cases are automatically routed to a senior analyst for human review
-- Segment performance is monitored continuously via the monitoring pipeline
+**EdTech** and **Singapore** predictions are automatically flagged for human review
+in the API response.
 
 ---
 
 ## 🏗️ Project Structure
 
-Each folder mirrors the MLOps course module structure, with a dedicated README
-explaining the decisions made at each stage.
-
 ```
 mlops-venturepulse/
 │
-├── 01-initial-notebook/
-│   └── EDA, feature distributions, LR baseline, class imbalance analysis
+├── 01-initial-notebook/       EDA, feature distributions, LR baseline
+├── 02-decision-tree-comparison/ LR vs DT vs RF — RF wins at P@100=38%
+├── 03-fairness-analysis/      Precision@100 audit — EdTech & Singapore flagged
+├── 04-experiment-tracking/    MLflow experiment tracking + model registry
+├── 05-deployment/             FastAPI serving + MLflow loading (pytest: 2 passed)
+├── 06-monitoring/             Evidently drift report via simulate.py + monitor.py
+├── 07-cicd/                   Docker + GitHub Actions → GHCR → Render.com
 │
-├── 02-decision-tree-comparison/
-│   └── Side-by-side comparison of LR, Decision Tree, and Random Forest
-│       Random Forest selected as winner (Precision@100 = 38%)
-│
-├── 03-fairness-analysis/
-│   └── Precision@100 audit by sector and location
-│       EdTech and Singapore flagged, deployment decision documented
-│
-├── 04-experiment-tracking/
-│   └── MLflow experiment tracking — logs params, metrics, and model artifacts
-│       Experiment: venturepulse-startup-prediction
-│
-├── 05-deployment/
-│   └── Production FastAPI service
-│       train.py → MLflow → run_id.txt → app.py → /predict endpoint
-│       pytest: 2 tests passing
-│
-├── 06-monitoring/
-│   └── simulate.py sends real data to /predict → predictions.csv
-│       monitor.py generates Evidently HTML drift report + fairness check
-│
-├── 07-cicd/
-│   └── Docker image with model baked in
-│       GitHub Actions: Train → Lint → Build → Test → Push to GHCR
-│       Render.com pulls image from GHCR for live deployment
+├── docs/
+│   └── index.html             Live demo (GitHub Pages)
 │
 ├── data/raw/
 │   └── venturepulse_dataset.csv (30,000 synthetic startups)
 │
 ├── .github/workflows/
-│   ├── ci-cd.yml    Main pipeline orchestrator
-│   └── train.yml    Reusable training workflow
+│   ├── ci-cd.yml              Train → Build → Test → Push to GHCR
+│   └── train.yml              Reusable training workflow
 │
-├── startup_generator.py    Synthetic dataset generator
-├── requirements.txt
-├── .flake8                 Linter config (max-line-length=88)
-└── README.md               This file
+└── startup_generator.py       Synthetic dataset generator
 ```
 
 ---
 
 ## 🔌 API Reference
 
-The prediction service runs on port `9696`.
+Base URL: `https://mlops-venturepulse.onrender.com`
 
 ### `GET /health`
 
 ```json
-{
-  "status": "ok",
-  "run_id": "abc123...",
-  "model_loaded": true
-}
+{ "status": "ok", "run_id": "abc123..." }
 ```
 
 ### `POST /predict`
 
-**Request body:**
-
+**Request:**
 ```json
 {
   "sector": "Fintech",
@@ -278,7 +228,6 @@ The prediction service runs on port `9696`.
 ```
 
 **Response:**
-
 ```json
 {
   "prediction": 1,
@@ -289,69 +238,36 @@ The prediction service runs on port `9696`.
 }
 ```
 
-**Confidence levels:** `Very Low` (<15%) · `Low` (15–30%) · `Medium` (30–50%) ·
-`High` (50–70%) · `Very High` (≥70%)
-
-**`flagged_for_review: true`** is returned automatically for EdTech and Singapore
-startups, routing them to human review.
+Confidence levels: `Very Low` (<15%) · `Low` (15–30%) · `Medium` (30–50%) · `High` (50–70%) · `Very High` (≥70%)
 
 ---
 
 ## 🚀 Running Locally
 
 ```powershell
-# 1. Clone and activate environment
 git clone https://github.com/davidcarrilloag/mlops-venturepulse.git
 cd mlops-venturepulse
 python -m venv venturepulse_env
 venturepulse_env\Scripts\activate
 pip install -r 05-deployment/requirements.txt
 
-# 2. Generate the dataset
 python startup_generator.py
-# → data/raw/venturepulse_dataset.csv (30,000 records)
-
-# 3. Start MLflow tracking server (Terminal 1)
-mlflow server --host 127.0.0.1 --port 5000
-
-# 4. Train the model (Terminal 2)
-cd 05-deployment
-python train.py
-# Outputs: run_id.txt, logs model to MLflow at http://localhost:5000
-
-# 5. Start the prediction API (Terminal 3)
-python app.py
-# API live at http://localhost:9696
-# Swagger UI at http://localhost:9696/docs
-
-# 6. Run tests (Terminal 4)
-pytest -q test_api.py
-# Expected: 2 passed
+mlflow server --host 127.0.0.1 --port 5000   # Terminal 1
+cd 05-deployment && python train.py            # Terminal 2
+python app.py                                  # Terminal 3 → localhost:9696
+pytest -q test_api.py                          # Terminal 4 → 2 passed
 ```
 
 ---
 
 ## 🔄 CI/CD Pipeline
 
-Every push to `main` triggers the full pipeline:
+Every push to `main` triggers:
 
 ```
-Git Push to main
-       │
-       ▼
-  train.yml (reusable)
-  └── Trains model, uploads models/ + run_id.txt as GitHub artifact
-       │
-       ▼
-  ci-cd.yml
-  ├── 1. Train    — calls train.yml
-  ├── 2. Lint     — flake8 07-cicd (0 errors required)
-  ├── 3. Build    — Docker image with model baked in, runs test_api.py
-  └── 4. Push     — ghcr.io/davidcarrilloag/mlops-venturepulse:latest
-       │
-       ▼
-  Render.com
-  └── Pulls image from GHCR → live web service
+git push → train.yml (train + upload artifact)
+         → ci-cd.yml (build Docker → test → push to GHCR)
+         → Render.com (pulls latest image → live)
 ```
 
 ---
@@ -360,23 +276,9 @@ Git Push to main
 
 ```powershell
 cd 06-monitoring
-
-# Send 100 real startups to the API and log results
-python simulate.py
-# → data/predictions.csv
-
-# Generate drift + fairness report
-python monitor.py
-# → monitoring_report.html
+python simulate.py   # → predictions.csv
+python monitor.py    # → monitoring_report.html (Evidently drift report)
 ```
-
-The monitoring report includes:
-
-- **Data drift detection** comparing reference vs current prediction windows
-- **Prediction distribution** shift over time
-- **Segment-level fairness** check against the 30% precision floor
-
-A drift score above 0.2 (PSI) triggers an alert recommending model retraining.
 
 ---
 
@@ -393,6 +295,7 @@ A drift score above 0.2 (PSI) triggers an alert recommending model retraining.
 | CI/CD | GitHub Actions |
 | Registry | GitHub Container Registry (GHCR) |
 | Deployment | Render.com |
+| Demo | GitHub Pages |
 | Language | Python 3.12 |
 
 ---
