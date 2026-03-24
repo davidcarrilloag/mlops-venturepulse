@@ -9,6 +9,22 @@ submissions and focus their attention on the startups most likely to succeed.
 
 ---
 
+## 🌐 Live Demo
+
+**[→ Try the VenturePulse Predictor](https://davidcarrilloag.github.io/mlops-venturepulse)**
+
+Enter a startup's pitch-stage data and get an instant ML-powered traction probability.
+The demo calls the live production API deployed on Render.com.
+
+**Live API:** `https://mlops-venturepulse.onrender.com`
+- `GET /health` — model status
+- `POST /predict` — traction prediction
+- `GET /docs` — Swagger UI
+
+> ⚠️ The free Render instance may take ~30 seconds to wake up after inactivity.
+
+---
+
 ## 👥 Team
 
 | Name | Role |
