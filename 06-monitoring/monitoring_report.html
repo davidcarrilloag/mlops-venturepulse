@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>VenturePulse Monitoring Report</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 40px; background: #f5f5f5; }
+    h1 { color: #2c3e50; }
+    h2 { color: #34495e; margin-top: 30px; }
+    table { border-collapse: collapse; width: 60%; background: white; }
+    th, td { border: 1px solid #ddd; padding: 10px 16px; text-align: left; }
+    th { background: #2c3e50; color: white; }
+    .ok { color: green; font-weight: bold; }
+    .alert { color: red; font-weight: bold; }
+    .box { background: white; padding: 20px; border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+  </style>
+</head>
+<body>
+  <h1>🚀 VenturePulse — Monitoring Report</h1>
+  <div class="box">
+    <h2>📊 Dataset Summary</h2>
+    <p>Reference window: <b>100</b> predictions</p>
+    <p>Current window: <b>100</b> predictions</p>
+  </div>
+
+  <div class="box">
+    <h2>📈 Prediction Drift</h2>
+    <p>Reference positive rate: <b>26.0%</b></p>
+    <p>Current positive rate: <b>26.0%</b></p>
+    <p>Drift: <b class="ok">0.0pp
+      ✅ OK</b></p>
+  </div>
+
+  <div class="box">
+    <h2>🔢 Feature Drift</h2>
+    <table>
+      <tr><th>Feature</th><th>Summary</th></tr>
+      <tr><td>probability</td><td>ref=0.260 | cur=0.260 | drift=0.0%</td></tr>
+<tr><td>initial_funding</td><td>ref=2141786.290 | cur=2141786.290 | drift=0.0%</td></tr>
+<tr><td>team_size</td><td>ref=6.960 | cur=6.960 | drift=0.0%</td></tr>
+
+    </table>
+  </div>
+
+  <div class="box">
+    <h2>⚖️ Fairness (from 03-fairness-analysis)</h2>
+    <p>EdTech and Singapore flagged for human review at deployment.</p>
+    <p>Floor threshold: <b>30%</b> precision per segment.</p>
+  </div>
+</body>
+</html>
