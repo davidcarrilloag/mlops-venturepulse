@@ -57,8 +57,8 @@ model assigns each startup a probability of achieving high traction — defined 
 meeting all three of the following criteria at t=18 months:
 
 - 📈 **Team growth ≥ 25%**
-- 💰 **Revenue ≥ $500K**
-- 📊 **MRR ≥ $25K**
+- 💰 **Revenue ≥ $500k**
+- 📊 **MRR ≥ $25k**
 
 ---
 
